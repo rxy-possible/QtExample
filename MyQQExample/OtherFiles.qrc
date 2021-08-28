@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/new/prefix1">
+        <file>source/images (1).jpeg</file>
+        <file>source/images (2).jpeg</file>
+        <file>source/images (3).jpeg</file>
+        <file>source/images.jpeg</file>
+        <file>source/images(4).jpeg</file>
+        <file>source/images (5).jpeg</file>
+        <file>source/下载.jpeg</file>
+        <file>source/images (6).jpeg</file>
+        <file>source/images (7).jpeg</file>
+    </qresource>
+    <qresource prefix="/"/>
+</RCC>
