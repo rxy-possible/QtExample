@@ -40,7 +40,7 @@ void ExtensionDlg::createBaseInfo()
     leftLayout->addWidget(sexLabel);
     leftLayout->addWidget(sexComboBox);
     QPushButton *OKBtn = new QPushButton(tr("确定"));
-    QPushButton *DetailBtn = new QPushButton(tr("详细"));
+    DetailBtn = new QPushButton(tr("详细"));
     QDialogButtonBox *btnBox = new QDialogButtonBox(Qt::Vertical);
     btnBox->addButton(OKBtn,QDialogButtonBox::ActionRole);
     btnBox->addButton(DetailBtn,QDialogButtonBox::ActionRole);
@@ -82,9 +82,12 @@ void ExtensionDlg::showDetailInfo()
     if(detailWidget->isHidden())
     {
         detailWidget->show();
+        DetailBtn->setText("简要");
+
     }
     else
     {
         detailWidget->hide();
+        DetailBtn->setText("详细");
     }
 }

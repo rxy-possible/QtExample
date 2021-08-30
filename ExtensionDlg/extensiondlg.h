@@ -2,6 +2,7 @@
 #define EXTENSIONDLG_H
 
 #include <QDialog>
+#include <QPushButton>
 
 class ExtensionDlg : public QDialog
 {
@@ -17,5 +18,7 @@ private:
     void createDetailInfo();
     QWidget *baseWidget;    //基本对话框窗体部分
     QWidget *detailWidget;  //扩展窗体部分
+
+    QPushButton *DetailBtn;
 };
 #endif // EXTENSIONDLG_H
