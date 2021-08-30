@@ -54,7 +54,7 @@ void Dialog::startProcess()
         QFont font("ZYSong18030",12);
         progressDialog->setFont(font);
         progressDialog->setWindowModality(Qt::WindowModal);
-        progressDialog->setMinimumDuration(5);
+        progressDialog->setMinimumDuration(10);
         progressDialog->setWindowTitle(tr("please wait"));
         progressDialog->setLabelText(tr("Copying..."));
         progressDialog->setCancelButtonText(tr("Cancel"));
