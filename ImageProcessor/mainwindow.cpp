@@ -1,5 +1,11 @@
 #include "mainwindow.h"
+#include <QDebug>
 #include <QHBoxLayout>
+#include <QPixmap>
+#include <QPainter>
+#include <QtPrintSupport/qprinter.h>
+#include <QtPrintSupport/qprintdialog.h>
+#include <QColorDialog>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -7,15 +13,187 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle(tr("Easy Word"));
     showWidget =new ShowWidget(this);
     setCentralWidget(showWidget);
+    //在工具栏上嵌入控件
+    //设置字体
+    fontLabel = new QLabel(tr("字体"));
+    fontComboBox = new QFontComboBox();
+    fontComboBox->setFontFilters(QFontComboBox::ScalableFonts);
+    fontLabel2 = new QLabel(tr("字号"));
+    sizeComboBox = new QComboBox();
+    QFontDatabase db;
+    foreach (int size, db.standardSizes()) {
+        sizeComboBox->addItem(QString::number(size));
+    }
+    boldBtn = new QToolButton();
+    boldBtn->setIcon(QIcon("bold.png"));
+    boldBtn->setCheckable(true);
+    italicBtn = new QToolButton();
+    italicBtn->setIcon(QIcon("italic.png"));
+    italicBtn->setCheckable(true);
+    underlineBtn = new QToolButton();
+    underlineBtn->setIcon(QIcon("underline.png"));
+    underlineBtn->setCheckable(true);
+    colorBtn = new QToolButton();
+    colorBtn->setIcon(QIcon("color.png"));
+    colorBtn->setCheckable(true);
+
+
+    //排序
+    listLabel = new QLabel(tr("排序"));
+    listComboBox = new QComboBox();
+    listComboBox->addItem("Standard");
+    listComboBox->addItem("QTextListFormat::ListDisc");
+    listComboBox->addItem("QTextListFormat::ListCircle");
+    listComboBox->addItem("QTextListFormat::ListSquare");
+    listComboBox->addItem("QTextListFormat::ListDecimal");
+    listComboBox->addItem("QTextListFormat::ListLowerAlpha");
+    listComboBox->addItem("QTextListFormat::ListUpperAlpha");
+    listComboBox->addItem("QTextListFormat::ListLowerRoman");
+    listComboBox->addItem("QTextListFormat::ListUppderRoman");
     createActions();
     createMenus();
     createToolBars();
-    if(img.load("image.png"))
+    qDebug()<<img.load("../ImageProcessor/source/image.jpeg");
+    if(img.load("../ImageProcessor/source/image.jpeg"))
         showWidget->imageLabel->setPixmap(QPixmap::fromImage(img));
 }
 
 MainWindow::~MainWindow()
 {
+}
+
+void MainWindow::ShowNewFile()
+{
+    MainWindow *newImageProcessor = new MainWindow();
+    newImageProcessor->show();
+}
+
+void MainWindow::ShowOpenFile()
+{
+    fileName = QFileDialog::getOpenFileName(this);
+    if(!fileName.isEmpty())
+    {
+        if(showWidget->text->document()->isEmpty())
+        {
+            loadFile(fileName);
+        }
+        else
+        {
+            MainWindow *newImgProcessor = new MainWindow();
+            newImgProcessor->show();
+            newImgProcessor->loadFile(fileName);
+        }
+    }
+}
+
+void MainWindow::loadFile(QString filename)
+{
+    printf("file name:%s\n",filename.data());
+    QFile file(filename);
+    if(file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QTextStream textStream(&file);
+        while(!textStream.atEnd())
+        {
+            showWidget->text->append(textStream.readLine());
+            printf("read line\n");
+        }
+        printf("end\n");
+    }
+}
+
+void MainWindow::ShowPrintText()
+{
+    QPrinter printer;
+    QPrintDialog printDialog(&printer,this);
+    if(printDialog.exec())
+    {
+        QTextDocument *doc = showWidget->text->document();
+        doc->print(&printer);
+    }
+}
+
+void MainWindow::ShowPrintImage()
+{
+    QPrinter printer;
+    QPrintDialog printDialog(&printer,this);
+    if(printDialog.exec())
+    {
+        QPainter painter(&printer);
+        QRect rect = painter.viewport();
+        QSize size = img.size();
+
+        /*按照图形的比例大小重新设置视图矩形的区域*/
+        size.scale(rect.size(),Qt::KeepAspectRatio);
+        painter.setViewport(rect.x(),rect.y(),size.width(),size.height());
+        painter.setWindow(img.rect());
+        painter.drawImage(0,0,img);
+    }
+}
+
+void MainWindow::ShowzoomIn()
+{
+    if(img.isNull())
+    {
+        return;
+    }
+    QMatrix matrix;
+    matrix.scale(2,2);
+    img = img.transformed(matrix);
+    //重新设置显示图形
+    showWidget->imageLabel->setPixmap(QPixmap::fromImage(img));
+}
+
+void MainWindow::ShowzoomOut()
+{
+    if(img.isNull())
+    {
+        return;
+    }
+    QMatrix matrix;
+    matrix.scale(0.5,0.5);
+    img = img.transformed(matrix);
+    //重新设置显示图形
+    showWidget->imageLabel->setPixmap(QPixmap::fromImage(img));
+}
+
+void MainWindow::ShowRotate90()
+{
+    if(img.isNull())
+    {
+        return ;
+    }
+
+    QMatrix matrix;
+    matrix.rotate(90);
+    img = img.transformed(matrix);
+    showWidget->imageLabel->setPixmap(QPixmap::fromImage(img));
+}
+
+void MainWindow::ShowRotate180()
+{
+    if(img.isNull())
+    {
+        return ;
+    }
+
+    QMatrix matrix;
+    matrix.rotate(180);
+    img = img.transformed(matrix);
+    showWidget->imageLabel->setPixmap(QPixmap::fromImage(img));
+}
+
+void MainWindow::ShowRotate270()
+{
+    if(img.isNull())
+    {
+        return ;
+    }
+
+    QMatrix matrix;
+    matrix.rotate(270);
+    img = img.transformed(matrix);
+    showWidget->imageLabel->setPixmap(QPixmap::fromImage(img));
 }
 
 void MainWindow::createActions()
@@ -102,6 +280,18 @@ void MainWindow::createActions()
     connect(undoAction,SIGNAL(triggered(bool)),showWidget->text,SLOT(undo()));
     redoAction = new QAction(QIcon("redo.png"),"重做",this);
     connect(redoAction,SIGNAL(triggered(bool)),showWidget->text,SLOT(redo()));
+
+    //排序：左对齐，右对齐，居中和两端对齐
+    actGrp = new QActionGroup(this);
+    leftAction = new QAction(QIcon("left.png"),"左对齐",actGrp);
+    leftAction->setCheckable(true);
+    leftAction = new QAction(QIcon("right.png"),"右对齐",actGrp);
+    leftAction->setCheckable(true);
+    leftAction = new QAction(QIcon("center.png"),"居中",actGrp);
+    leftAction->setCheckable(true);
+    leftAction = new QAction(QIcon("justify.png"),"两端对齐",actGrp);
+    leftAction->setCheckable(true);
+    connect(actGrp,SIGNAL(triggered(QAction*)),this,SLOT(ShowAlignment(QAction*)));
 }
 
 void MainWindow::createMenus()
@@ -135,6 +325,27 @@ void MainWindow::createMenus()
     mirrorMenu = menuBar()->addMenu(tr("镜像"));
     mirrorMenu->addAction(mirrorVericalAction);
     mirrorMenu->addAction(mirrorHorizontalAction);
+
+    connect(NewFileAction,SIGNAL(triggered(bool)),this,SLOT(ShowNewFile()));
+    connect(openFileAction,SIGNAL(triggered(bool)),this,SLOT(ShowOpenFile()));
+    connect(PrintTextAction,SIGNAL(triggered(bool)),this,SLOT(ShowPrintText()));
+    connect(PrintImageAction,SIGNAL(triggered(bool)),this,SLOT(ShowPrintImage()));
+    connect(zoomInAction,SIGNAL(triggered(bool)),this,SLOT(ShowzoomIn()));
+    connect(zoomOutAction,SIGNAL(triggered(bool)),this,SLOT(ShowzoomOut()));
+    connect(rotate90Action,SIGNAL(triggered(bool)),this,SLOT(ShowRotate90()));
+    connect(rotate180Action,SIGNAL(triggered(bool)),this,SLOT(ShowRotate180()));
+    connect(rotate270Action,SIGNAL(triggered(bool)),this,SLOT(ShowRotate270()));
+    connect(fontComboBox,SIGNAL(activated(QString)),this,SLOT(ShowFontComboBox(QString)));
+    connect(sizeComboBox,SIGNAL(activated(QString)),this,SLOT(ShowSizeSpinBox(QString)));
+    connect(boldBtn,SIGNAL(clicked(bool)),this,SLOT(ShowBoldBtn()));
+    connect(italicBtn,SIGNAL(clicked(bool)),this,SLOT(ShowItalicBtn()));
+    connect(underlineBtn,SIGNAL(clicked(bool)),this,SLOT(ShowUnderlineBtn()));
+    connect(colorBtn,SIGNAL(clicked(bool)),this,SLOT(ShowColorBtn()));
+    connect(showWidget->text,SIGNAL(currentCharFormatChanged(QTextCharFormat&)),this,SLOT(ShowCurrentFormatChanged(QTextCharFormat&)));
+//    connect(listComboBox,SIGNAL(activated(int)),this,SLOT(ShowList(int)));
+    connect(showWidget->text->document(),SIGNAL(undoAvailable(bool)),undoAction,SLOT(setEnabled(bool)));
+    connect(showWidget->text->document(),SIGNAL(redoAvailable(bool)),redoAction,SLOT(setEnabled(bool)));
+    connect(showWidget->text,SIGNAL(cursorPositionChanged()),this,SLOT(ShowCursorPositionChanged()));
 }
 
 void MainWindow::createToolBars()
@@ -165,4 +376,131 @@ void MainWindow::createToolBars()
     doToolBar->addAction(undoAction);
     doToolBar->addAction(redoAction);
 
+    fontToolBar = addToolBar("Font");
+    fontToolBar->addWidget(fontLabel);
+    fontToolBar->addWidget(fontComboBox);
+    fontToolBar->addWidget(fontLabel2);
+    fontToolBar->addWidget(sizeComboBox);
+    fontToolBar->addSeparator();
+    fontToolBar->addWidget(boldBtn);
+    fontToolBar->addWidget(italicBtn);
+    fontToolBar->addWidget(underlineBtn);
+    fontToolBar->addSeparator();
+    fontToolBar->addWidget(colorBtn);
+
+    //排序工具条
+    listToolBar = addToolBar("list");
+    listToolBar->addWidget(listLabel);
+    listToolBar->addWidget(listComboBox);
+    listToolBar->addSeparator();
+    listToolBar->addActions(actGrp->actions());
+}
+
+void MainWindow::ShowAlignment(QAction *act)
+{
+    if(act == leftAction)
+    {
+        showWidget->text->setAlignment(Qt::AlignLeft);
+    }
+    if(act == rightAction)
+    {
+        showWidget->text->setAlignment(Qt::AlignRight);
+    }
+    if(act == centerAction)
+    {
+        showWidget->text->setAlignment(Qt::AlignCenter);
+    }
+    if(act == justifyAction)
+    {
+        showWidget->text->setAlignment(Qt::AlignJustify);
+    }
+}
+
+void MainWindow::ShowCursorPositionChanged()
+{
+    if(showWidget->text->alignment() == Qt::AlignLeft)
+    {
+        leftAction->setChecked(true);
+    }
+
+    if(showWidget->text->alignment() == Qt::AlignRight)
+    {
+        rightAction->setChecked(true);
+    }
+
+    if(showWidget->text->alignment() == Qt::AlignCenter)
+    {
+        centerAction->setChecked(true);
+    }
+
+    if(showWidget->text->alignment() == Qt::AlignJustify)
+    {
+        justifyAction->setChecked(true);
+    }
+}
+
+void MainWindow::ShowFontComboBox(QString comboStr)
+{
+    QTextCharFormat fmt;
+    fmt.setFontFamily(comboStr);   //选择创建的字体名称设置给QTextCharFormat对象
+    mergeFormat(fmt);
+}
+
+void MainWindow::mergeFormat(QTextCharFormat format)
+{
+    QTextCursor cursor = showWidget->text->textCursor();
+    if(!cursor.hasSelection())
+    {
+        cursor.select(QTextCursor::WordUnderCursor);
+    }
+    cursor.mergeCharFormat(format);
+    showWidget->text->mergeCurrentCharFormat(format);
+}
+
+void MainWindow::ShowSizeSpinBox(QString spinValue)
+{
+    QTextCharFormat fmt;
+    fmt.setFontPointSize(spinValue.toFloat());
+    showWidget->text->mergeCurrentCharFormat(fmt);
+}
+
+void MainWindow::ShowBoldBtn()
+{
+    QTextCharFormat fmt;
+    fmt.setFontWeight(boldBtn->isChecked()?QFont::Bold:QFont::Normal);
+    showWidget->text->mergeCurrentCharFormat(fmt);
+}
+
+void MainWindow::ShowItalicBtn()
+{
+    QTextCharFormat fmt;
+    fmt.setFontItalic(italicBtn->isChecked());
+    showWidget->text->mergeCurrentCharFormat(fmt);
+}
+
+void MainWindow::ShowUnderlineBtn()
+{
+    QTextCharFormat fmt;
+    fmt.setFontUnderline(underlineBtn->isChecked());
+    showWidget->text->mergeCurrentCharFormat(fmt);
+}
+
+void MainWindow::ShowColorBtn()
+{
+    QColor color = QColorDialog::getColor(Qt::red,this);
+    if(color.isValid())
+    {
+        QTextCharFormat fmt;
+        fmt.setForeground(color);
+        showWidget->text->mergeCurrentCharFormat(fmt);
+    }
+}
+
+void MainWindow::ShowCurrentFormatChanged(const QTextCharFormat &fmt)
+{
+    fontComboBox->setCurrentIndex(fontComboBox->findText(fmt.fontFamily()));
+    sizeComboBox->setCurrentIndex(sizeComboBox->findText(QString::number(fmt.fontPointSize())));
+    boldBtn->setChecked(fmt.font().bold());
+    italicBtn->setChecked(fmt.fontItalic());
+    underlineBtn->setChecked(fmt.fontUnderline());
 }
